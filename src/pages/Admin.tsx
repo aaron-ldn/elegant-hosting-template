@@ -1,5 +1,5 @@
+
 import React, { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,11 +9,26 @@ import { useToast } from "@/hooks/use-toast";
 import { LayoutDashboard, Users, FileText, Settings, Layers, HelpCircle } from "lucide-react";
 import PricingEditor from "@/components/admin/PricingEditor";
 import FAQEditor from "@/components/admin/FAQEditor";
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
+  SidebarFooter,
+} from "@/components/ui/sidebar";
 
 const Admin = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [activeSection, setActiveSection] = useState('dashboard');
+  const [activePage, setActivePage] = useState('');
   const { toast } = useToast();
 
   // Simple authentication - replace with real auth in production
@@ -79,53 +94,12 @@ const Admin = () => {
     );
   }
 
-  // Admin dashboard if authenticated
-  return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <h1 className="text-2xl font-bold">CloudHost Admin</h1>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsAuthenticated(false)}
-            >
-              Logout
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-6 mb-8">
-            <TabsTrigger value="dashboard" className="flex items-center gap-2">
-              <LayoutDashboard className="h-4 w-4" />
-              <span className="hidden sm:inline">Dashboard</span>
-            </TabsTrigger>
-            <TabsTrigger value="content" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Content</span>
-            </TabsTrigger>
-            <TabsTrigger value="pricing" className="flex items-center gap-2">
-              <Layers className="h-4 w-4" />
-              <span className="hidden sm:inline">Pricing</span>
-            </TabsTrigger>
-            <TabsTrigger value="faqs" className="flex items-center gap-2">
-              <HelpCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">FAQs</span>
-            </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">Users</span>
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              <span className="hidden sm:inline">Settings</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="dashboard" className="space-y-4">
+  // Render content based on active section
+  const renderContent = () => {
+    switch (activeSection) {
+      case 'dashboard':
+        return (
+          <div className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle>Overview</CardTitle>
@@ -177,9 +151,39 @@ const Admin = () => {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="content" className="space-y-4">
+          </div>
+        );
+      case 'pages':
+        if (activePage === 'pricing') {
+          return (
+            <Card>
+              <CardHeader>
+                <CardTitle>Pricing Plans</CardTitle>
+                <CardDescription>
+                  Manage your pricing plans
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PricingEditor />
+              </CardContent>
+            </Card>
+          );
+        } else if (activePage === 'faqs') {
+          return (
+            <Card>
+              <CardHeader>
+                <CardTitle>Frequently Asked Questions</CardTitle>
+                <CardDescription>
+                  Manage your FAQs section
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FAQEditor />
+              </CardContent>
+            </Card>
+          );
+        } else if (activePage === 'content') {
+          return (
             <Card>
               <CardHeader>
                 <CardTitle>Website Content</CardTitle>
@@ -222,97 +226,216 @@ const Admin = () => {
                 </Button>
               </CardFooter>
             </Card>
-          </TabsContent>
+          );
+        }
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Pages</CardTitle>
+              <CardDescription>
+                Select a page to edit from the sidebar menu
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        );
+      case 'users':
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>User Management</CardTitle>
+              <CardDescription>
+                Manage website users and permissions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p>User management functionality will be implemented here.</p>
+            </CardContent>
+          </Card>
+        );
+      case 'settings':
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Website Settings</CardTitle>
+              <CardDescription>
+                Configure your website settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="site-name">Site Name</Label>
+                <Input 
+                  id="site-name" 
+                  defaultValue="CloudHost" 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="site-url">Site URL</Label>
+                <Input 
+                  id="site-url" 
+                  defaultValue="https://cloudhost.com" 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contact-email">Contact Email</Label>
+                <Input 
+                  id="contact-email" 
+                  defaultValue="info@cloudhost.com" 
+                  type="email"
+                />
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button onClick={() => {
+                toast({
+                  title: "Settings updated",
+                  description: "Your settings have been saved",
+                });
+              }}>
+                Save Settings
+              </Button>
+            </CardFooter>
+          </Card>
+        );
+      default:
+        return null;
+    }
+  };
 
-          <TabsContent value="pricing" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Pricing Plans</CardTitle>
-                <CardDescription>
-                  Manage your pricing plans
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <PricingEditor />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="faqs" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Frequently Asked Questions</CardTitle>
-                <CardDescription>
-                  Manage your FAQs section
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <FAQEditor />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="users" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>
-                  Manage website users and permissions
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p>User management functionality will be implemented here.</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="settings" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Website Settings</CardTitle>
-                <CardDescription>
-                  Configure your website settings
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="site-name">Site Name</Label>
-                  <Input 
-                    id="site-name" 
-                    defaultValue="CloudHost" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="site-url">Site URL</Label>
-                  <Input 
-                    id="site-url" 
-                    defaultValue="https://cloudhost.com" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="contact-email">Contact Email</Label>
-                  <Input 
-                    id="contact-email" 
-                    defaultValue="info@cloudhost.com" 
-                    type="email"
-                  />
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button onClick={() => {
-                  toast({
-                    title: "Settings updated",
-                    description: "Your settings have been saved",
-                  });
-                }}>
-                  Save Settings
-                </Button>
-              </CardFooter>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </main>
-    </div>
+  return (
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-gray-100">
+        <Sidebar collapsible="icon" variant="sidebar">
+          <SidebarHeader className="flex flex-col items-center justify-center p-4 border-b">
+            <h2 className="text-xl font-bold">CloudHost Admin</h2>
+          </SidebarHeader>
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      isActive={activeSection === 'dashboard'}
+                      tooltip="Dashboard"
+                      onClick={() => {
+                        setActiveSection('dashboard');
+                        setActivePage('');
+                      }}
+                    >
+                      <LayoutDashboard className="h-4 w-4" />
+                      <span>Dashboard</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      isActive={activeSection === 'pages'}
+                      tooltip="Pages"
+                      onClick={() => {
+                        setActiveSection('pages');
+                        setActivePage('');
+                      }}
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span>Pages</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  
+                  {activeSection === 'pages' && (
+                    <>
+                      <SidebarMenuItem className="pl-6">
+                        <SidebarMenuButton 
+                          isActive={activePage === 'content'}
+                          tooltip="Content"
+                          size="sm"
+                          onClick={() => {
+                            setActivePage('content');
+                          }}
+                        >
+                          <span>General Content</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      
+                      <SidebarMenuItem className="pl-6">
+                        <SidebarMenuButton 
+                          isActive={activePage === 'pricing'}
+                          tooltip="Pricing"
+                          size="sm"
+                          onClick={() => {
+                            setActivePage('pricing');
+                          }}
+                        >
+                          <Layers className="h-4 w-4" />
+                          <span>Pricing Plans</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      
+                      <SidebarMenuItem className="pl-6">
+                        <SidebarMenuButton 
+                          isActive={activePage === 'faqs'}
+                          tooltip="FAQs"
+                          size="sm"
+                          onClick={() => {
+                            setActivePage('faqs');
+                          }}
+                        >
+                          <HelpCircle className="h-4 w-4" />
+                          <span>FAQs</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </>
+                  )}
+                  
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      isActive={activeSection === 'users'}
+                      tooltip="Users"
+                      onClick={() => {
+                        setActiveSection('users');
+                        setActivePage('');
+                      }}
+                    >
+                      <Users className="h-4 w-4" />
+                      <span>Users</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  
+                  <SidebarMenuItem>
+                    <SidebarMenuButton 
+                      isActive={activeSection === 'settings'}
+                      tooltip="Settings"
+                      onClick={() => {
+                        setActiveSection('settings');
+                        setActivePage('');
+                      }}
+                    >
+                      <Settings className="h-4 w-4" />
+                      <span>Settings</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+          <SidebarFooter className="border-t p-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsAuthenticated(false)}
+              className="w-full"
+            >
+              Logout
+            </Button>
+          </SidebarFooter>
+        </Sidebar>
+        
+        <main className="flex-1 p-6 overflow-auto">
+          <div className="max-w-6xl mx-auto">
+            {renderContent()}
+          </div>
+        </main>
+      </div>
+    </SidebarProvider>
   );
 };
 
