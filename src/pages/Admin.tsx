@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -7,7 +6,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { LayoutDashboard, Users, FileText, Settings } from "lucide-react";
+import { LayoutDashboard, Users, FileText, Settings, Layers, HelpCircle } from "lucide-react";
+import PricingEditor from "@/components/admin/PricingEditor";
+import FAQEditor from "@/components/admin/FAQEditor";
 
 const Admin = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -97,7 +98,7 @@ const Admin = () => {
 
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-8">
+          <TabsList className="grid w-full grid-cols-6 mb-8">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <LayoutDashboard className="h-4 w-4" />
               <span className="hidden sm:inline">Dashboard</span>
@@ -105,6 +106,14 @@ const Admin = () => {
             <TabsTrigger value="content" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">Content</span>
+            </TabsTrigger>
+            <TabsTrigger value="pricing" className="flex items-center gap-2">
+              <Layers className="h-4 w-4" />
+              <span className="hidden sm:inline">Pricing</span>
+            </TabsTrigger>
+            <TabsTrigger value="faqs" className="flex items-center gap-2">
+              <HelpCircle className="h-4 w-4" />
+              <span className="hidden sm:inline">FAQs</span>
             </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
@@ -212,6 +221,34 @@ const Admin = () => {
                   Save Changes
                 </Button>
               </CardFooter>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="pricing" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Pricing Plans</CardTitle>
+                <CardDescription>
+                  Manage your pricing plans
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PricingEditor />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="faqs" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Frequently Asked Questions</CardTitle>
+                <CardDescription>
+                  Manage your FAQs section
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FAQEditor />
+              </CardContent>
             </Card>
           </TabsContent>
 

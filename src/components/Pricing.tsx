@@ -2,11 +2,15 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Check } from 'lucide-react';
+import { PricingPlan } from '@/data/types';
 
-const plans = [
+// When integrating with a real backend, this data would come from an API
+const plans: PricingPlan[] = [
   {
+    id: '1',
     name: "Starter",
-    price: { monthly: 5.99, yearly: 4.99 },
+    monthlyPrice: 5.99,
+    yearlyPrice: 4.99,
     features: [
       "1 Website",
       "10GB SSD Storage",
@@ -19,8 +23,10 @@ const plans = [
     cta: "Get Started"
   },
   {
+    id: '2',
     name: "Professional",
-    price: { monthly: 12.99, yearly: 9.99 },
+    monthlyPrice: 12.99,
+    yearlyPrice: 9.99,
     features: [
       "10 Websites",
       "50GB SSD Storage",
@@ -35,8 +41,10 @@ const plans = [
     cta: "Get Started"
   },
   {
+    id: '3',
     name: "Business",
-    price: { monthly: 24.99, yearly: 19.99 },
+    monthlyPrice: 24.99,
+    yearlyPrice: 19.99,
     features: [
       "Unlimited Websites",
       "100GB SSD Storage",
@@ -93,9 +101,9 @@ const Pricing = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {plans.map((plan, index) => (
+          {plans.map((plan) => (
             <div
-              key={index}
+              key={plan.id}
               className={`bg-white rounded-xl shadow-lg overflow-hidden transition-transform hover:-translate-y-1 ${
                 plan.popular ? 'border-2 border-hosting-blue relative' : ''
               }`}
@@ -109,7 +117,7 @@ const Pricing = () => {
                 <h3 className="text-xl font-bold text-hosting-gray mb-2">{plan.name}</h3>
                 <div className="mb-6">
                   <span className="text-4xl font-bold">
-                    ${billingCycle === 'monthly' ? plan.price.monthly : plan.price.yearly}
+                    ${billingCycle === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice}
                   </span>
                   <span className="text-gray-500 ml-1">/mo</span>
                 </div>
