@@ -6,8 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, Plus, Copy } from 'lucide-react';
+import { Trash2, Plus, Copy, Grid3X3, ListFilter, ArrowLeft, ArrowRight, Save } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 
 // Initial data - same as in the Pricing component
 const initialPlans: PricingPlan[] = [
@@ -67,7 +69,7 @@ const initialPlans: PricingPlan[] = [
   }
 ];
 
-// A new component for individual plan editing
+// A component for individual plan editing
 const PlanEditor = ({ 
   plan, 
   onUpdate, 
@@ -100,7 +102,7 @@ const PlanEditor = ({
   };
 
   return (
-    <Card className="mb-6">
+    <Card className="h-full flex flex-col">
       <CardHeader className="pb-2">
         <div className="flex justify-between">
           <CardTitle className="text-xl">{plan.name}</CardTitle>
@@ -124,8 +126,8 @@ const PlanEditor = ({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <CardContent className="space-y-4 flex-grow overflow-y-auto">
+        <div className="space-y-4">
           <div>
             <Label htmlFor={`plan-name-${plan.id}`}>Plan Name</Label>
             <Input 
@@ -134,7 +136,7 @@ const PlanEditor = ({
               onChange={(e) => handleChange('name', e.target.value)} 
             />
           </div>
-          <div className="flex items-center space-x-2 pt-6">
+          <div className="flex items-center space-x-2">
             <Switch 
               checked={plan.popular} 
               onCheckedChange={(checked) => handleChange('popular', checked)} 
@@ -144,7 +146,7 @@ const PlanEditor = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <Label htmlFor={`monthly-price-${plan.id}`}>Monthly Price ($)</Label>
             <Input 
@@ -211,7 +213,20 @@ const PlanEditor = ({
 
 const PricingEditor = () => {
   const [plans, setPlans] = useState<PricingPlan[]>(initialPlans);
+  const [viewMode, setViewMode] = useState<'grid' | 'single'>('grid');
+  const [currentPlanIndex, setCurrentPlanIndex] = useState(0);
   const { toast } = useToast();
+  
+  const ITEMS_PER_PAGE = 3;
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.ceil(plans.length / ITEMS_PER_PAGE);
+  
+  // Get current plans for grid view pagination
+  const indexOfLastPlan = currentPage * ITEMS_PER_PAGE;
+  const indexOfFirstPlan = indexOfLastPlan - ITEMS_PER_PAGE;
+  const currentPlans = plans.slice(indexOfFirstPlan, indexOfLastPlan);
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   const handlePlanUpdate = (updatedPlan: PricingPlan) => {
     setPlans(plans.map(plan => plan.id === updatedPlan.id ? updatedPlan : plan));
@@ -228,6 +243,15 @@ const PricingEditor = () => {
       cta: "Get Started"
     };
     setPlans([...plans, newPlan]);
+    
+    // Move to the last page if we're in grid view
+    if (viewMode === 'grid') {
+      const newTotalPages = Math.ceil((plans.length + 1) / ITEMS_PER_PAGE);
+      setCurrentPage(newTotalPages);
+    } else {
+      // Move to the new plan if we're in single view
+      setCurrentPlanIndex(plans.length);
+    }
   };
 
   const duplicatePlan = (plan: PricingPlan) => {
@@ -237,41 +261,187 @@ const PricingEditor = () => {
       name: `${plan.name} (Copy)`,
     };
     setPlans([...plans, newPlan]);
+    
+    // Move to the last page if we added a new plan
+    if (viewMode === 'grid') {
+      const newTotalPages = Math.ceil((plans.length + 1) / ITEMS_PER_PAGE);
+      setCurrentPage(newTotalPages);
+    }
   };
 
   const removePlan = (id: string) => {
-    setPlans(plans.filter(plan => plan.id !== id));
+    const newPlans = plans.filter(plan => plan.id !== id);
+    setPlans(newPlans);
+    
+    // Adjust currentPlanIndex if we're in single view and the current plan was deleted
+    if (viewMode === 'single') {
+      if (newPlans.length === 0) {
+        // No plans left
+        setCurrentPlanIndex(0);
+      } else if (currentPlanIndex >= newPlans.length) {
+        // Current plan was the last one
+        setCurrentPlanIndex(newPlans.length - 1);
+      }
+    }
+    
+    // Adjust current page if needed
+    const newTotalPages = Math.ceil(newPlans.length / ITEMS_PER_PAGE);
+    if (currentPage > newTotalPages && newTotalPages > 0) {
+      setCurrentPage(newTotalPages);
+    }
   };
 
   const handleSave = () => {
     // In a real app, you would save this to a database
-    // For now, we'll just show a toast message
     toast({
       title: "Pricing plans updated",
       description: "Your changes have been saved successfully",
     });
   };
 
+  const nextPlan = () => {
+    if (currentPlanIndex < plans.length - 1) {
+      setCurrentPlanIndex(currentPlanIndex + 1);
+    }
+  };
+
+  const prevPlan = () => {
+    if (currentPlanIndex > 0) {
+      setCurrentPlanIndex(currentPlanIndex - 1);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium">Pricing Plans</h3>
-        <Button onClick={addPlan} className="flex items-center gap-1">
-          <Plus className="h-4 w-4" /> Add Plan
-        </Button>
+        <div className="flex items-center space-x-2">
+          <h3 className="text-lg font-medium">Pricing Plans</h3>
+          <div className="bg-gray-100 rounded-md p-1 flex ml-4">
+            <Button 
+              variant={viewMode === 'grid' ? 'default' : 'ghost'} 
+              size="sm" 
+              onClick={() => setViewMode('grid')}
+              className="px-2"
+            >
+              <Grid3X3 className="h-4 w-4" />
+            </Button>
+            <Button 
+              variant={viewMode === 'single' ? 'default' : 'ghost'} 
+              size="sm" 
+              onClick={() => setViewMode('single')}
+              className="px-2"
+            >
+              <ListFilter className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="flex space-x-2">
+          <Button onClick={addPlan} className="flex items-center gap-1">
+            <Plus className="h-4 w-4" /> Add Plan
+          </Button>
+          <Button onClick={handleSave} className="flex items-center gap-1">
+            <Save className="h-4 w-4" /> Save All
+          </Button>
+        </div>
       </div>
 
-      {plans.map((plan) => (
-        <PlanEditor
-          key={plan.id}
-          plan={plan}
-          onUpdate={handlePlanUpdate}
-          onDelete={() => removePlan(plan.id)}
-          onDuplicate={() => duplicatePlan(plan)}
-        />
-      ))}
-
-      <Button onClick={handleSave} className="w-full">Save Changes</Button>
+      {viewMode === 'grid' ? (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {currentPlans.map((plan) => (
+              <PlanEditor
+                key={plan.id}
+                plan={plan}
+                onUpdate={handlePlanUpdate}
+                onDelete={() => removePlan(plan.id)}
+                onDuplicate={() => duplicatePlan(plan)}
+              />
+            ))}
+          </div>
+          
+          {totalPages > 1 && (
+            <Pagination className="mt-6">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    href="#" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage > 1) paginate(currentPage - 1);
+                    }}
+                    className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
+                
+                {Array.from({ length: totalPages }, (_, i) => (
+                  <PaginationItem key={i + 1}>
+                    <PaginationLink 
+                      href="#" 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        paginate(i + 1);
+                      }}
+                      isActive={currentPage === i + 1}
+                    >
+                      {i + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    href="#" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage < totalPages) paginate(currentPage + 1);
+                    }}
+                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
+        </>
+      ) : (
+        <div className="space-y-4">
+          {plans.length > 0 ? (
+            <>
+              <div className="flex items-center justify-between mb-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={prevPlan}
+                  disabled={currentPlanIndex === 0}
+                >
+                  <ArrowLeft className="h-4 w-4 mr-1" /> Previous
+                </Button>
+                <span className="text-sm">
+                  Plan {currentPlanIndex + 1} of {plans.length}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={nextPlan}
+                  disabled={currentPlanIndex === plans.length - 1}
+                >
+                  Next <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
+              </div>
+              <PlanEditor
+                plan={plans[currentPlanIndex]}
+                onUpdate={handlePlanUpdate}
+                onDelete={() => removePlan(plans[currentPlanIndex].id)}
+                onDuplicate={() => duplicatePlan(plans[currentPlanIndex])}
+              />
+            </>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-gray-500 mb-4">No pricing plans found</p>
+              <Button onClick={addPlan}>Add Your First Plan</Button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
