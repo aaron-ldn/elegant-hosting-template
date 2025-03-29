@@ -34,3 +34,15 @@ export interface Permission {
   description: string;
   roles: Role[];
 }
+
+export interface Page {
+  id: string;
+  title: string;
+  slug: string;
+  content: string;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+  order: number;
+  showInMenu: boolean;
+}

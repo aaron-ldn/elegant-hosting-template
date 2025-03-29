@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -5,10 +6,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { LayoutDashboard, Users, FileText, Settings, Layers, HelpCircle } from "lucide-react";
+import { LayoutDashboard, Users, FileText, Settings, Layers, HelpCircle, FilePenLine } from "lucide-react";
 import PricingEditor from "@/components/admin/PricingEditor";
 import FAQEditor from "@/components/admin/FAQEditor";
 import UserManagement from "@/components/admin/UserManagement";
+import PageManagement from "@/components/admin/PageManagement";
 import {
   SidebarProvider,
   Sidebar,
@@ -150,7 +152,9 @@ const Admin = () => {
           </div>
         );
       case 'pages':
-        if (activePage === 'pricing') {
+        if (activePage === 'manage') {
+          return <PageManagement />;
+        } else if (activePage === 'pricing') {
           return (
             <Card>
               <CardHeader>
@@ -328,6 +332,20 @@ const Admin = () => {
                   
                   {activeSection === 'pages' && (
                     <>
+                      <SidebarMenuItem className="pl-6">
+                        <SidebarMenuButton 
+                          isActive={activePage === 'manage'}
+                          tooltip="Page Management"
+                          size="sm"
+                          onClick={() => {
+                            setActivePage('manage');
+                          }}
+                        >
+                          <FilePenLine className="h-4 w-4" />
+                          <span>Page Management</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      
                       <SidebarMenuItem className="pl-6">
                         <SidebarMenuButton 
                           isActive={activePage === 'content'}
