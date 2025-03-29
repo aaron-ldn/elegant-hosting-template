@@ -4,8 +4,11 @@ import { useParams, Link } from 'react-router-dom';
 import { Page } from '@/data/types';
 import { ArrowLeft } from 'lucide-react';
 
-// Mock data - in a real app, this would come from an API or database
-const mockPages: Page[] = [
+// Storage key for pages
+const PAGES_STORAGE_KEY = 'cloudhost_pages';
+
+// Initial fallback pages if none are found in storage
+const initialPages: Page[] = [
   {
     id: '1',
     title: 'About Us',
@@ -37,12 +40,27 @@ const PageView = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Simulate API call to fetch page data
     setLoading(true);
     setError(null);
 
+    // Get pages from localStorage
+    const savedPages = localStorage.getItem(PAGES_STORAGE_KEY);
+    let pagesArray: Page[] = [];
+    
+    if (savedPages) {
+      try {
+        pagesArray = JSON.parse(savedPages);
+      } catch (error) {
+        console.error('Error parsing saved pages:', error);
+        pagesArray = initialPages;
+      }
+    } else {
+      pagesArray = initialPages;
+    }
+
+    // Find the requested page
     setTimeout(() => {
-      const foundPage = mockPages.find(p => p.slug === slug && p.isPublished);
+      const foundPage = pagesArray.find(p => p.slug === slug && p.isPublished);
       
       if (foundPage) {
         setPage(foundPage);
@@ -51,7 +69,7 @@ const PageView = () => {
       }
       
       setLoading(false);
-    }, 300); // Simulate network delay
+    }, 300); // Keep the small delay for UX
   }, [slug]);
 
   if (loading) {

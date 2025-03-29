@@ -37,8 +37,11 @@ const initialPages: Page[] = [
   }
 ];
 
+// Create a key for localStorage
+const PAGES_STORAGE_KEY = 'cloudhost_pages';
+
 const PageManagement = () => {
-  const [pages, setPages] = useState<Page[]>(initialPages);
+  const [pages, setPages] = useState<Page[]>([]);
   const [currentPage, setCurrentPage] = useState<Page | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const { toast } = useToast();
@@ -49,6 +52,28 @@ const PageManagement = () => {
   const [content, setContent] = useState('');
   const [isPublished, setIsPublished] = useState(true);
   const [showInMenu, setShowInMenu] = useState(true);
+
+  // Load pages from localStorage on component mount
+  useEffect(() => {
+    const savedPages = localStorage.getItem(PAGES_STORAGE_KEY);
+    if (savedPages) {
+      try {
+        setPages(JSON.parse(savedPages));
+      } catch (error) {
+        console.error('Error parsing saved pages:', error);
+        setPages(initialPages);
+      }
+    } else {
+      setPages(initialPages);
+    }
+  }, []);
+
+  // Save pages to localStorage whenever they change
+  useEffect(() => {
+    if (pages.length > 0) {
+      localStorage.setItem(PAGES_STORAGE_KEY, JSON.stringify(pages));
+    }
+  }, [pages]);
 
   const resetForm = () => {
     setTitle('');
@@ -113,6 +138,7 @@ const PageManagement = () => {
         title: "Page updated",
         description: "Your changes have been saved",
       });
+      console.log("Updated pages:", updatedPages);
     } else {
       // Create new page
       const newPage: Page = {
@@ -127,11 +153,14 @@ const PageManagement = () => {
         order: pages.length + 1
       };
       
-      setPages([...pages, newPage]);
+      const newPages = [...pages, newPage];
+      setPages(newPages);
       toast({
         title: "Page created",
         description: "New page has been created successfully",
       });
+      console.log("New page created:", newPage);
+      console.log("Updated pages array:", newPages);
     }
     
     resetForm();
