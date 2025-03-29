@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { LayoutDashboard, Users, FileText, Settings, Layers, HelpCircle } from "lucide-react";
 import PricingEditor from "@/components/admin/PricingEditor";
 import FAQEditor from "@/components/admin/FAQEditor";
+import UserManagement from "@/components/admin/UserManagement";
 import {
   SidebarProvider,
   Sidebar,
@@ -31,10 +31,8 @@ const Admin = () => {
   const [activePage, setActivePage] = useState('');
   const { toast } = useToast();
 
-  // Simple authentication - replace with real auth in production
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // For demonstration purposes only - use proper authentication in production
     if (username === 'admin' && password === 'admin123') {
       setIsAuthenticated(true);
       toast({
@@ -50,7 +48,6 @@ const Admin = () => {
     }
   };
 
-  // Login form if not authenticated
   if (!isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
@@ -94,7 +91,6 @@ const Admin = () => {
     );
   }
 
-  // Render content based on active section
   const renderContent = () => {
     switch (activeSection) {
       case 'dashboard':
@@ -239,19 +235,7 @@ const Admin = () => {
           </Card>
         );
       case 'users':
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>User Management</CardTitle>
-              <CardDescription>
-                Manage website users and permissions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p>User management functionality will be implemented here.</p>
-            </CardContent>
-          </Card>
-        );
+        return <UserManagement />;
       case 'settings':
         return (
           <Card>

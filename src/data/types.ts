@@ -14,3 +14,23 @@ export interface FAQ {
   question: string;
   answer: string;
 }
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  role: Role;
+  status: 'active' | 'inactive';
+  lastActive?: string;
+  createdAt: string;
+}
+
+export type Role = 'admin' | 'editor' | 'viewer';
+
+export interface Permission {
+  id: string;
+  name: string;
+  description: string;
+  roles: Role[];
+}
