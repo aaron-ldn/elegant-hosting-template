@@ -89,6 +89,24 @@ class DatabaseService {
           );
         `);
 
+        // Create settings table
+        this.db.run(`
+          CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+          );
+        `);
+
+        // Insert default settings
+        this.db.run(`
+          INSERT OR IGNORE INTO settings (key, value, updated_at)
+          VALUES 
+            ('site_name', 'CloudHost', '${new Date().toISOString()}'),
+            ('site_url', 'https://cloudhost.com', '${new Date().toISOString()}'),
+            ('contact_email', 'info@cloudhost.com', '${new Date().toISOString()}')
+        `);
+
         // Insert default admin user if none exists
         const result = this.db.exec("SELECT * FROM users WHERE email = 'admin@cloudhost.com'");
         if (result.length === 0 || result[0].values.length === 0) {
@@ -306,6 +324,75 @@ class DatabaseService {
     } catch (error) {
       console.error('Create user error:', error);
       return { success: false, error: "Failed to create user" };
+    }
+  }
+
+  // Settings operations
+  async getSettings(): Promise<DBResult> {
+    await this.ensureInitialized();
+    
+    try {
+      if (!this.db) throw new Error("Database not initialized");
+      
+      const result = this.db.exec("SELECT key, value FROM settings");
+      
+      if (result.length > 0) {
+        const settings: Record<string, string> = {};
+        result[0].values.forEach(row => {
+          settings[row[0] as string] = row[1] as string;
+        });
+        
+        return { success: true, data: settings };
+      }
+      
+      return { success: true, data: {} };
+    } catch (error) {
+      console.error('Get settings error:', error);
+      return { success: false, error: "Failed to get settings" };
+    }
+  }
+
+  async updateSettings(settings: Record<string, string>): Promise<DBResult> {
+    await this.ensureInitialized();
+    
+    try {
+      if (!this.db) throw new Error("Database not initialized");
+      
+      const now = new Date().toISOString();
+      
+      // Begin a transaction
+      this.db.run("BEGIN TRANSACTION");
+      
+      try {
+        const stmt = this.db.prepare(`
+          INSERT OR REPLACE INTO settings (key, value, updated_at)
+          VALUES (?, ?, ?)
+        `);
+        
+        // Update each setting
+        for (const [key, value] of Object.entries(settings)) {
+          stmt.bind([key, value, now]);
+          stmt.step();
+          stmt.reset();
+        }
+        
+        stmt.free();
+        
+        // Commit the transaction if all updates were successful
+        this.db.run("COMMIT");
+        
+        // Save changes to localStorage
+        await this.saveToLocalStorage();
+        
+        return { success: true };
+      } catch (error) {
+        // Rollback on error
+        this.db.run("ROLLBACK");
+        throw error;
+      }
+    } catch (error) {
+      console.error('Update settings error:', error);
+      return { success: false, error: "Failed to update settings" };
     }
   }
 

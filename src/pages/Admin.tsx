@@ -3,13 +3,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { LayoutDashboard, Users, FileText, Settings, Layers, HelpCircle, FilePenLine, Loader2 } from "lucide-react";
 import PricingEditor from "@/components/admin/PricingEditor";
 import FAQEditor from "@/components/admin/FAQEditor";
 import UserManagement from "@/components/admin/UserManagement";
 import PageManagement from "@/components/admin/PageManagement";
+import SettingsManager from "@/components/admin/SettingsManager";
 import DatabaseService from "@/services/DatabaseService";
 import {
   SidebarProvider,
@@ -277,50 +277,7 @@ const Admin = () => {
       case 'users':
         return <UserManagement />;
       case 'settings':
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Website Settings</CardTitle>
-              <CardDescription>
-                Configure your website settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="site-name">Site Name</Label>
-                <Input 
-                  id="site-name" 
-                  defaultValue="CloudHost" 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="site-url">Site URL</Label>
-                <Input 
-                  id="site-url" 
-                  defaultValue="https://cloudhost.com" 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="contact-email">Contact Email</Label>
-                <Input 
-                  id="contact-email" 
-                  defaultValue="info@cloudhost.com" 
-                  type="email"
-                />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button onClick={() => {
-                toast({
-                  title: "Settings updated",
-                  description: "Your settings have been saved",
-                });
-              }}>
-                Save Settings
-              </Button>
-            </CardFooter>
-          </Card>
-        );
+        return <SettingsManager />;
       default:
         return null;
     }
