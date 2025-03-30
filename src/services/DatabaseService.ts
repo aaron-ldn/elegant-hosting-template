@@ -32,10 +32,11 @@ class DatabaseService {
       const loadedFromStorage = await this.loadFromLocalStorage();
       
       if (!loadedFromStorage) {
+        console.log('No database in localStorage, creating a new one...');
         // Initialize SQL.js only if we didn't load from localStorage
         const SQL = await initSqlJs({
-          // Specify the path to the wasm file
-          locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+          // Updated path to the correct CDN location for wasm file
+          locateFile: file => `https://sql.js.org/dist/${file}`
         });
 
         // Create a new database
@@ -91,6 +92,7 @@ class DatabaseService {
         // Insert default admin user if none exists
         const result = this.db.exec("SELECT * FROM users WHERE email = 'admin@cloudhost.com'");
         if (result.length === 0 || result[0].values.length === 0) {
+          console.log('Creating default admin user...');
           this.db.run(`
             INSERT INTO users (id, name, email, password, role, status, created_at)
             VALUES ('1', 'Admin User', 'admin@cloudhost.com', 'password', 'admin', 'active', '${new Date().toISOString()}')
@@ -98,7 +100,7 @@ class DatabaseService {
         }
 
         // Save the database to localStorage
-        this.saveToLocalStorage();
+        await this.saveToLocalStorage();
       }
 
       this.initialized = true;
@@ -112,27 +114,43 @@ class DatabaseService {
   // Ensure database is initialized before performing operations
   private async ensureInitialized(): Promise<void> {
     if (!this.initialized && this.initPromise) {
+      console.log('Waiting for database initialization...');
       await this.initPromise;
     }
   }
 
   // Save the current database state to localStorage
-  private saveToLocalStorage(): void {
-    if (this.db) {
-      const data = this.db.export();
-      const buffer = new Uint8Array(data);
-      const blob = new Blob([buffer]);
-      
-      // Convert to base64 for storage
-      const reader = new FileReader();
-      reader.onload = () => {
-        if (reader.result) {
-          localStorage.setItem('cloudhost_db', reader.result as string);
-          console.log('Database saved to localStorage');
+  private async saveToLocalStorage(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (this.db) {
+        try {
+          const data = this.db.export();
+          const buffer = new Uint8Array(data);
+          const blob = new Blob([buffer]);
+          
+          // Convert to base64 for storage
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (reader.result) {
+              localStorage.setItem('cloudhost_db', reader.result as string);
+              console.log('Database saved to localStorage');
+              resolve();
+            } else {
+              reject(new Error('Failed to read blob data'));
+            }
+          };
+          reader.onerror = () => {
+            reject(reader.error);
+          };
+          reader.readAsDataURL(blob);
+        } catch (error) {
+          console.error('Error exporting database:', error);
+          reject(error);
         }
-      };
-      reader.readAsDataURL(blob);
-    }
+      } else {
+        reject(new Error('Database not initialized'));
+      }
+    });
   }
 
   // Load the database from localStorage
@@ -140,8 +158,9 @@ class DatabaseService {
     try {
       const dbData = localStorage.getItem('cloudhost_db');
       if (dbData) {
+        console.log('Found database in localStorage, loading...');
         const SQL = await initSqlJs({
-          locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+          locateFile: file => `https://sql.js.org/dist/${file}`
         });
 
         // Convert from base64 back to binary
@@ -159,16 +178,20 @@ class DatabaseService {
       return false;
     } catch (error) {
       console.error('Failed to load database from localStorage:', error);
+      localStorage.removeItem('cloudhost_db'); // Remove corrupted data
       return false;
     }
   }
 
   // User operations
   async authenticateUser(email: string, password: string): Promise<DBResult> {
-    await this.ensureInitialized();
-    
     try {
-      if (!this.db) throw new Error("Database not initialized");
+      await this.ensureInitialized();
+      
+      if (!this.db) {
+        console.error('Database not initialized during authentication');
+        throw new Error("Database not initialized");
+      }
       
       console.log(`Authenticating user: ${email}`);
       
@@ -195,7 +218,7 @@ class DatabaseService {
           updateStmt.step();
           updateStmt.free();
           
-          this.saveToLocalStorage();
+          await this.saveToLocalStorage();
           
           console.log('Authentication successful');
           return { 
@@ -220,7 +243,7 @@ class DatabaseService {
       console.error('Authentication error:', error);
       return { 
         success: false, 
-        error: "Authentication failed" 
+        error: "Authentication failed: " + (error instanceof Error ? error.message : String(error)) 
       };
     }
   }

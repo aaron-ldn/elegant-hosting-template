@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { LayoutDashboard, Users, FileText, Settings, Layers, HelpCircle, FilePenLine } from "lucide-react";
+import { LayoutDashboard, Users, FileText, Settings, Layers, HelpCircle, FilePenLine, Loader2 } from "lucide-react";
 import PricingEditor from "@/components/admin/PricingEditor";
 import FAQEditor from "@/components/admin/FAQEditor";
 import UserManagement from "@/components/admin/UserManagement";
@@ -27,25 +27,38 @@ import {
 
 const Admin = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('admin@cloudhost.com');
+  const [password, setPassword] = useState('password');
   const [activeSection, setActiveSection] = useState('dashboard');
   const [activePage, setActivePage] = useState('');
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('cloudhost_user');
-    if (storedUser) {
+    const checkUserSession = async () => {
       try {
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
-        setIsAuthenticated(true);
+        const storedUser = localStorage.getItem('cloudhost_user');
+        if (storedUser) {
+          try {
+            const userData = JSON.parse(storedUser);
+            setUser(userData);
+            setIsAuthenticated(true);
+            console.log('User session restored from localStorage');
+          } catch (error) {
+            console.error('Failed to parse stored user data:', error);
+            localStorage.removeItem('cloudhost_user');
+          }
+        }
       } catch (error) {
-        console.error('Failed to parse stored user data:', error);
+        console.error('Error checking session:', error);
+      } finally {
+        setIsInitializing(false);
       }
-    }
+    };
+    
+    checkUserSession();
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -59,7 +72,7 @@ const Admin = () => {
       
       console.log('Login result:', result);
       
-      if (result.success) {
+      if (result.success && result.data) {
         localStorage.setItem('cloudhost_user', JSON.stringify(result.data));
         
         setUser(result.data);
@@ -79,7 +92,7 @@ const Admin = () => {
       console.error('Login error:', error);
       toast({
         title: "Login error",
-        description: "An unexpected error occurred",
+        description: "An unexpected error occurred: " + (error instanceof Error ? error.message : String(error)),
         variant: "destructive",
       });
     } finally {
@@ -91,6 +104,8 @@ const Admin = () => {
     localStorage.removeItem('cloudhost_user');
     setIsAuthenticated(false);
     setUser(null);
+    setEmail('admin@cloudhost.com');
+    setPassword('password');
     toast({
       title: "Logged out",
       description: "You have been logged out successfully",
@@ -311,6 +326,17 @@ const Admin = () => {
     }
   };
 
+  if (isInitializing) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+          <p className="mt-2 text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
@@ -355,7 +381,12 @@ const Admin = () => {
                 className="w-full"
                 disabled={isLoading}
               >
-                {isLoading ? "Logging in..." : "Login"}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Logging in...
+                  </>
+                ) : "Login"}
               </Button>
               
               <div className="w-full">
