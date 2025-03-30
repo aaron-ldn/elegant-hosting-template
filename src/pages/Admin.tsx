@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,7 @@ import PricingEditor from "@/components/admin/PricingEditor";
 import FAQEditor from "@/components/admin/FAQEditor";
 import UserManagement from "@/components/admin/UserManagement";
 import PageManagement from "@/components/admin/PageManagement";
+import DatabaseService from "@/services/DatabaseService";
 import {
   SidebarProvider,
   Sidebar,
@@ -31,67 +31,56 @@ const Admin = () => {
   const [password, setPassword] = useState('');
   const [activeSection, setActiveSection] = useState('dashboard');
   const [activePage, setActivePage] = useState('');
+  const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (username === 'admin' && password === 'admin123') {
-      setIsAuthenticated(true);
+    setIsLoading(true);
+    
+    try {
+      const dbService = DatabaseService.getInstance();
+      const result = await dbService.authenticateUser(username, password);
+      
+      if (result.success) {
+        setUser(result.data);
+        setIsAuthenticated(true);
+        toast({
+          title: "Login successful",
+          description: `Welcome back, ${result.data.name}`,
+        });
+      } else {
+        toast({
+          title: "Login failed",
+          description: result.error || "Invalid username or password",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Login error:', error);
       toast({
-        title: "Login successful",
-        description: "Welcome to the admin panel",
-      });
-    } else {
-      toast({
-        title: "Login failed",
-        description: "Invalid username or password",
+        title: "Login error",
+        description: "An unexpected error occurred",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Admin Login</CardTitle>
-            <CardDescription>
-              Login to access the admin dashboard
-            </CardDescription>
-          </CardHeader>
-          <form onSubmit={handleLogin}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="username">Username</Label>
-                <Input
-                  id="username"
-                  placeholder="Username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button type="submit" className="w-full">Login</Button>
-            </CardFooter>
-          </form>
-        </Card>
-      </div>
-    );
-  }
+  const handleDevLogin = () => {
+    setIsAuthenticated(true);
+    setUser({
+      name: 'Developer',
+      email: 'dev@example.com',
+      role: 'admin'
+    });
+    toast({
+      title: "Dev mode active",
+      description: "Logged in using development credentials",
+    });
+  };
 
   const renderContent = () => {
     switch (activeSection) {
@@ -290,13 +279,80 @@ const Admin = () => {
     }
   };
 
+  if (!isAuthenticated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Admin Login</CardTitle>
+            <CardDescription>
+              Login to access the admin dashboard
+            </CardDescription>
+          </CardHeader>
+          <form onSubmit={handleLogin}>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="username">Email</Label>
+                <Input
+                  id="username"
+                  placeholder="Email"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Default login: admin@cloudhost.com / password
+              </div>
+            </CardContent>
+            <CardFooter className="flex-col space-y-2">
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={isLoading}
+              >
+                {isLoading ? "Logging in..." : "Login"}
+              </Button>
+              
+              <div className="w-full">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  className="w-full mt-2"
+                  onClick={handleDevLogin}
+                >
+                  Quick Dev Login
+                </Button>
+              </div>
+            </CardFooter>
+          </form>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gray-100">
         <Sidebar collapsible="icon" variant="sidebar">
           <SidebarHeader className="flex flex-col items-center justify-center p-4 border-b">
             <h2 className="text-xl font-bold">CloudHost Admin</h2>
+            {user && (
+              <p className="text-xs text-muted-foreground">{user.name} ({user.role})</p>
+            )}
           </SidebarHeader>
+          
           <SidebarContent>
             <SidebarGroup>
               <SidebarGroupLabel>Navigation</SidebarGroupLabel>
