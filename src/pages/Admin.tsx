@@ -3,12 +3,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { LayoutDashboard, Users, FileText, Settings, Layers, HelpCircle, FilePenLine, Loader2 } from "lucide-react";
 import PricingEditor from "@/components/admin/PricingEditor";
 import FAQEditor from "@/components/admin/FAQEditor";
 import UserManagement from "@/components/admin/UserManagement";
 import PageManagement from "@/components/admin/PageManagement";
+import PageBuilder from "@/components/admin/PageBuilder";
 import SettingsManager from "@/components/admin/SettingsManager";
 import DatabaseService from "@/services/DatabaseService";
 import {
@@ -190,6 +192,8 @@ const Admin = () => {
       case 'pages':
         if (activePage === 'manage') {
           return <PageManagement />;
+        } else if (activePage === 'builder') {
+          return <PageBuilder />;
         } else if (activePage === 'pricing') {
           return (
             <Card>
@@ -420,6 +424,20 @@ const Admin = () => {
                         >
                           <FilePenLine className="h-4 w-4" />
                           <span>Page Management</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      
+                      <SidebarMenuItem className="pl-6">
+                        <SidebarMenuButton 
+                          isActive={activePage === 'builder'}
+                          tooltip="Page Builder"
+                          size="sm"
+                          onClick={() => {
+                            setActivePage('builder');
+                          }}
+                        >
+                          <Layers className="h-4 w-4" />
+                          <span>Page Builder</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                       
