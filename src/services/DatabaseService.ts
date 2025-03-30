@@ -28,73 +28,78 @@ class DatabaseService {
 
   private async initDatabase(): Promise<void> {
     try {
-      // Initialize SQL.js
-      const SQL = await initSqlJs({
-        // Specify the path to the wasm file
-        locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
-      });
-
-      // Create a new database
-      this.db = new SQL.Database();
+      // Check if we have a database in localStorage first
+      const loadedFromStorage = await this.loadFromLocalStorage();
       
-      // Create users table
-      this.db.run(`
-        CREATE TABLE IF NOT EXISTS users (
-          id TEXT PRIMARY KEY,
-          name TEXT NOT NULL,
-          email TEXT UNIQUE NOT NULL,
-          password TEXT NOT NULL,
-          role TEXT NOT NULL,
-          status TEXT NOT NULL,
-          last_active TEXT,
-          created_at TEXT NOT NULL
-        );
-      `);
+      if (!loadedFromStorage) {
+        // Initialize SQL.js only if we didn't load from localStorage
+        const SQL = await initSqlJs({
+          // Specify the path to the wasm file
+          locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+        });
 
-      // Create permissions table
-      this.db.run(`
-        CREATE TABLE IF NOT EXISTS permissions (
-          id TEXT PRIMARY KEY,
-          name TEXT NOT NULL,
-          description TEXT NOT NULL
-        );
-      `);
-
-      // Create roles_permissions table
-      this.db.run(`
-        CREATE TABLE IF NOT EXISTS roles_permissions (
-          role_name TEXT NOT NULL,
-          permission_id TEXT NOT NULL,
-          PRIMARY KEY (role_name, permission_id)
-        );
-      `);
-
-      // Create pages table
-      this.db.run(`
-        CREATE TABLE IF NOT EXISTS pages (
-          id TEXT PRIMARY KEY,
-          title TEXT NOT NULL,
-          slug TEXT UNIQUE NOT NULL,
-          content TEXT NOT NULL,
-          is_published INTEGER NOT NULL,
-          created_at TEXT NOT NULL,
-          updated_at TEXT NOT NULL,
-          page_order INTEGER NOT NULL,
-          show_in_menu INTEGER NOT NULL
-        );
-      `);
-
-      // Insert default admin user if none exists
-      const result = this.db.exec("SELECT * FROM users WHERE email = 'admin@cloudhost.com'");
-      if (result.length === 0 || result[0].values.length === 0) {
+        // Create a new database
+        this.db = new SQL.Database();
+        
+        // Create users table
         this.db.run(`
-          INSERT INTO users (id, name, email, password, role, status, created_at)
-          VALUES ('1', 'Admin User', 'admin@cloudhost.com', '$2a$10$XQnPY7dBkARgHY7rLJVK8emQF1/3N8mKI1hgNRAYnT.guSf5NUF1e', 'admin', 'active', '${new Date().toISOString()}')
+          CREATE TABLE IF NOT EXISTS users (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            role TEXT NOT NULL,
+            status TEXT NOT NULL,
+            last_active TEXT,
+            created_at TEXT NOT NULL
+          );
         `);
-      }
 
-      // Save the database to localStorage
-      this.saveToLocalStorage();
+        // Create permissions table
+        this.db.run(`
+          CREATE TABLE IF NOT EXISTS permissions (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            description TEXT NOT NULL
+          );
+        `);
+
+        // Create roles_permissions table
+        this.db.run(`
+          CREATE TABLE IF NOT EXISTS roles_permissions (
+            role_name TEXT NOT NULL,
+            permission_id TEXT NOT NULL,
+            PRIMARY KEY (role_name, permission_id)
+          );
+        `);
+
+        // Create pages table
+        this.db.run(`
+          CREATE TABLE IF NOT EXISTS pages (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            slug TEXT UNIQUE NOT NULL,
+            content TEXT NOT NULL,
+            is_published INTEGER NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            page_order INTEGER NOT NULL,
+            show_in_menu INTEGER NOT NULL
+          );
+        `);
+
+        // Insert default admin user if none exists
+        const result = this.db.exec("SELECT * FROM users WHERE email = 'admin@cloudhost.com'");
+        if (result.length === 0 || result[0].values.length === 0) {
+          this.db.run(`
+            INSERT INTO users (id, name, email, password, role, status, created_at)
+            VALUES ('1', 'Admin User', 'admin@cloudhost.com', 'password', 'admin', 'active', '${new Date().toISOString()}')
+          `);
+        }
+
+        // Save the database to localStorage
+        this.saveToLocalStorage();
+      }
 
       this.initialized = true;
       console.log('Database initialized successfully');
@@ -123,6 +128,7 @@ class DatabaseService {
       reader.onload = () => {
         if (reader.result) {
           localStorage.setItem('cloudhost_db', reader.result as string);
+          console.log('Database saved to localStorage');
         }
       };
       reader.readAsDataURL(blob);
@@ -132,12 +138,12 @@ class DatabaseService {
   // Load the database from localStorage
   private async loadFromLocalStorage(): Promise<boolean> {
     try {
-      const SQL = await initSqlJs({
-        locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
-      });
-
       const dbData = localStorage.getItem('cloudhost_db');
       if (dbData) {
+        const SQL = await initSqlJs({
+          locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+        });
+
         // Convert from base64 back to binary
         const binaryString = atob(dbData.split(',')[1]);
         const bytes = new Uint8Array(binaryString.length);
@@ -147,6 +153,7 @@ class DatabaseService {
         
         // Create database from the loaded data
         this.db = new SQL.Database(bytes);
+        console.log('Database loaded from localStorage');
         return true;
       }
       return false;
@@ -163,10 +170,11 @@ class DatabaseService {
     try {
       if (!this.db) throw new Error("Database not initialized");
       
-      // In a real app, you'd hash the password and compare hashes
-      // For this demo, we'll do a simple comparison
-      const stmt = this.db.prepare("SELECT * FROM users WHERE email = ? AND password = ?");
-      stmt.bind([email, password]);
+      console.log(`Authenticating user: ${email}`);
+      
+      // First get the user to check if they exist
+      const stmt = this.db.prepare("SELECT * FROM users WHERE email = ?");
+      stmt.bind([email]);
       
       const result = [];
       while (stmt.step()) {
@@ -174,24 +182,39 @@ class DatabaseService {
       }
       stmt.free();
       
+      console.log('Authentication query results:', result);
+      
       if (result.length > 0) {
-        // Update last active time
-        const updateStmt = this.db.prepare("UPDATE users SET last_active = ? WHERE id = ?");
-        updateStmt.bind([new Date().toISOString(), result[0].id]);
-        updateStmt.step();
-        updateStmt.free();
+        const user = result[0];
         
-        this.saveToLocalStorage();
+        // Compare passwords directly (in a real app, use bcrypt or similar)
+        if (user.password === password) {
+          // Update last active time
+          const updateStmt = this.db.prepare("UPDATE users SET last_active = ? WHERE id = ?");
+          updateStmt.bind([new Date().toISOString(), user.id]);
+          updateStmt.step();
+          updateStmt.free();
+          
+          this.saveToLocalStorage();
+          
+          console.log('Authentication successful');
+          return { 
+            success: true, 
+            data: user 
+          };
+        }
         
+        console.log('Invalid password');
         return { 
-          success: true, 
-          data: result[0] 
+          success: false, 
+          error: "Invalid password" 
         };
       }
       
+      console.log('User not found');
       return { 
         success: false, 
-        error: "Invalid credentials" 
+        error: "User not found" 
       };
     } catch (error) {
       console.error('Authentication error:', error);

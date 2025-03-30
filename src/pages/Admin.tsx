@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +27,7 @@ import {
 
 const Admin = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [activeSection, setActiveSection] = useState('dashboard');
   const [activePage, setActivePage] = useState('');
@@ -35,15 +35,33 @@ const Admin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  useEffect(() => {
+    const storedUser = localStorage.getItem('cloudhost_user');
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
+        setIsAuthenticated(true);
+      } catch (error) {
+        console.error('Failed to parse stored user data:', error);
+      }
+    }
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
+      console.log(`Attempting login with: ${email}`);
       const dbService = DatabaseService.getInstance();
-      const result = await dbService.authenticateUser(username, password);
+      const result = await dbService.authenticateUser(email, password);
+      
+      console.log('Login result:', result);
       
       if (result.success) {
+        localStorage.setItem('cloudhost_user', JSON.stringify(result.data));
+        
         setUser(result.data);
         setIsAuthenticated(true);
         toast({
@@ -53,7 +71,7 @@ const Admin = () => {
       } else {
         toast({
           title: "Login failed",
-          description: result.error || "Invalid username or password",
+          description: result.error || "Invalid credentials",
           variant: "destructive",
         });
       }
@@ -69,13 +87,27 @@ const Admin = () => {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('cloudhost_user');
+    setIsAuthenticated(false);
+    setUser(null);
+    toast({
+      title: "Logged out",
+      description: "You have been logged out successfully",
+    });
+  };
+
   const handleDevLogin = () => {
-    setIsAuthenticated(true);
-    setUser({
+    const devUser = {
+      id: 'dev-user',
       name: 'Developer',
       email: 'dev@example.com',
-      role: 'admin'
-    });
+      role: 'admin',
+      status: 'active',
+    };
+    localStorage.setItem('cloudhost_user', JSON.stringify(devUser));
+    setIsAuthenticated(true);
+    setUser(devUser);
     toast({
       title: "Dev mode active",
       description: "Logged in using development credentials",
@@ -292,12 +324,13 @@ const Admin = () => {
           <form onSubmit={handleLogin}>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username">Email</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="username"
+                  id="email"
+                  type="email"
                   placeholder="Email"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
@@ -479,7 +512,7 @@ const Admin = () => {
           <SidebarFooter className="border-t p-4">
             <Button 
               variant="outline" 
-              onClick={() => setIsAuthenticated(false)}
+              onClick={handleLogout}
               className="w-full"
             >
               Logout
